@@ -9,6 +9,7 @@ import random
 import shutil
 import subprocess
 import tempfile
+import glob
 from fractions import Fraction
 
 import filetype
@@ -970,3 +971,36 @@ def get_alphanumeric_only(string):
     """
     string = "".join([char for char in string if char.isalnum()])
     return string.lower()
+
+
+def convert_hls_segment_extension(directory, old_ext=".ts", new_ext=".html"):
+    """Change HLS segment file extensions and update playlists.
+
+    Recursively renames all files ending with ``old_ext`` under ``directory`` so
+    that they use ``new_ext`` instead. Any ``.m3u8`` playlists found are also
+    updated to reference the new extension.
+    """
+
+    if not os.path.isdir(directory):
+        return False
+
+    segment_pattern = os.path.join(directory, f"**/*{old_ext}")
+    for segment in glob.glob(segment_pattern, recursive=True):
+        new_name = segment[: -len(old_ext)] + new_ext
+        try:
+            os.rename(segment, new_name)
+        except OSError:
+            continue
+
+    playlist_pattern = os.path.join(directory, "**/*.m3u8")
+    for playlist in glob.glob(playlist_pattern, recursive=True):
+        try:
+            with open(playlist, "r") as f:
+                data = f.read()
+            data = data.replace(old_ext, new_ext)
+            with open(playlist, "w") as f:
+                f.write(data)
+        except OSError:
+            continue
+
+    return True
