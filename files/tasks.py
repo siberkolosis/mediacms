@@ -547,6 +547,11 @@ def create_hls(friendly_token):
             output_dir = existing_output_dir
 
         convert_hls_segment_extension(output_dir, ".ts", ".html")
+
+        bucket = os.environ.get("AWS_S3_BUCKET")
+        prefix = os.environ.get("AWS_S3_PREFIX", "")
+        if bucket:
+            upload_and_cleanup(output_dir, bucket, prefix)
         pp = os.path.join(output_dir, "master.m3u8")
         if os.path.exists(pp):
             if media.hls_file != pp:
