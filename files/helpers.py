@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tempfile
 import glob
+import boto3
 from fractions import Fraction
 
 import filetype
@@ -1002,5 +1003,39 @@ def convert_hls_segment_extension(directory, old_ext=".ts", new_ext=".html"):
                 f.write(data)
         except OSError:
             continue
+
+    return True
+
+
+def upload_and_cleanup(directory: str, bucket: str, prefix: str):
+    """Upload playlist assets to S3 and remove them locally."""
+
+    if not os.path.isdir(directory):
+        return False
+
+    client = boto3.client(
+        "s3",
+        aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
+        endpoint_url=os.environ.get("AWS_S3_ENDPOINT_URL"),
+    )
+
+    patterns = [
+        os.path.join(directory, "**/*.html"),
+        os.path.join(directory, "**/*.m3u8"),
+    ]
+
+    files = []
+    for pattern in patterns:
+        files.extend(glob.glob(pattern, recursive=True))
+
+    for file_path in files:
+        key = os.path.join(prefix, os.path.relpath(file_path, directory))
+        key = key.replace("\\", "/")
+        try:
+            client.upload_file(file_path, bucket, key)
+            rm_file(file_path)
+        except Exception as e:
+            logger.info(f"Failed to upload {file_path}: {str(e)}")
 
     return True
