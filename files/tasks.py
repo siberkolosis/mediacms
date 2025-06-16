@@ -32,6 +32,7 @@ from .helpers import (
     produce_ffmpeg_commands,
     produce_friendly_token,
     rm_file,
+    convert_hls_segment_extension,
     run_command,
     trim_video_method,
 )
@@ -544,6 +545,8 @@ def create_hls(friendly_token):
                 # because create_hls was running multiple times
                 pass
             output_dir = existing_output_dir
+
+        convert_hls_segment_extension(output_dir, ".ts", ".html")
         pp = os.path.join(output_dir, "master.m3u8")
         if os.path.exists(pp):
             if media.hls_file != pp:
